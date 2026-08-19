@@ -9,11 +9,11 @@ from python_modules.forms.register_form import RegisterForm
 from python_modules.api import api
 from data.reset_passwords import DCode
 from flask_cors import CORS
-from python_modules.messanger import mg
+from python_modules.messanger import mg, send_alert
 from python_modules.admin_panel import panel
 from python_modules.events_io import socketio
 from python_modules.chats_action import chats_server
-from python_modules.tg_bot.bot_def import send_random_key
+# from python_modules.tg_bot.bot_def import send_random_key
 from data.alerts import Alert
 
 application = Flask(__name__)
@@ -73,6 +73,10 @@ def login():
         user = db_sess.query(User).filter(User.email== form.username.data).first()
         if user and user.check_password(form.password.data):
             login_user(user, remember=form.remember_me.data, duration=datetime.timedelta(hours=24*90))
+            send_alert(user.id, db_sess, "Внимание!!!", f"""<b>В ваш аккаунт выполнен вход!</b
+                <p>
+                Информация о входе:
+                {request.headers.get('User-Agent')}\n<b> ip</b> {request.remote_addr}</p>""")
             db_sess.close()
             return redirect("/m")
         db_sess.close()
@@ -102,27 +106,29 @@ def reqister():
         user.set_password(form.password.data)
         db_sess.add(user)
         db_sess.commit()
+        # 1 - пользователь с id 1 тех поддежка
+        send_alert(1, db_sess, text=f"Новая регистрация: username: {user.email}, name:{user.name}")
         login_user(user, remember=True, duration=datetime.timedelta(hours=24 * 90))
         db_sess.close()
         return redirect('/m')
     return render_template('register.html', title='Регистрация', form=form)
 
 
-@application.route("/reset_password")
-def reset_pass_def():
-    return render_template("reset_password.html")
+# @application.route("/reset_password")
+# def reset_pass_def():
+#     return render_template("reset_password.html")
 
 
-@application.route("/send_code_tg", methods=["POST"])
-def send_code_tg_server():
-    data = request.get_json()
-    code = random.randint(100000, 999999)
-    db_sess = db_session.create_session()
-    user_id = db_sess.query(User.id).filter(User.email == data["login"]).first()
-    test = send_random_key(user_id, code)
-    code_status, message = test[0], test[1]
-    db_sess.close()
-    return {"status": code_status, "message": message}
+# @application.route("/send_code_tg", methods=["POST"])
+# def send_code_tg_server():
+#     data = request.get_json()
+#     code = random.randint(100000, 999999)
+#     db_sess = db_session.create_session()
+#     user_id = db_sess.query(User.id).filter(User.email == data["login"]).first()
+#     test = send_random_key(user_id, code)
+#     code_status, message = test[0], test[1]
+#     db_sess.close()
+#     return {"status": code_status, "message": message}
 
 
 @application.route("/check_code_and_login", methods=["POST"])

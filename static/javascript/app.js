@@ -34,15 +34,11 @@ function edit(id_mess){
 }
 
 
-function close_edit() {
-    globalThis.edit_id = "";
-    globalThis .edit_flag = false;
-    document.getElementById("edit-label").style.display = "none";
-}
-
-
 function edit_post(id_mess, text){
 var chat_id = document.getElementById("chat_id").value;
+globalThis.edit_id = "";
+    globalThis .edit_flag = false;
+    document.getElementById("edit-label").style.display = "none";
     $.ajax({
     url: '/m/edit_message',
     type: 'POST',
@@ -50,7 +46,6 @@ var chat_id = document.getElementById("chat_id").value;
     contentType:'application/json',
     data: JSON.stringify({"id":id_mess, "new_text": text, "chat_id": chat_id}),
     success: function(json){
-    socket.emit("edit_mess", {new_text: text, id_m: id_mess, room: chat_id});
         close_edit();
     },
     error: function(err) {
@@ -86,14 +81,7 @@ function un_pinned(mess_id){
     contentType:'application/json',
     data: JSON.stringify({"mess_id": mess_id, "chat_id": document.getElementById("chat_id").value}),
     success: function(json){
-         var list_pin = document.getElementById("list_pin").value.trim().split(" ");
-         if (list_pin.length == 1){
-            document.getElementById("pinned").innerHTML = "";
-         } else {
-            go_pin(mess_id);
-            list_pin.splice(list_pin.indexOf(mess_id));
-            document.getElementById("list_pin").value = list_pin.join(" ");
-         }
+//         delete_pin_message(mess_id);
     },
     error: function(err) {
         console.error(err);
@@ -170,6 +158,7 @@ function set_recipient(id_chat, is_primary, name, status, pinned) {
     call_btn.setAttribute("onclick", `send_call(${is_primary})`);
 //    call_btn.style.display = "block";
     socket.emit('join', {room: id_chat});
+
 }
 
 
@@ -287,15 +276,21 @@ function show(path){
                 cont.innerHTML += '<div class="date_k">' + time2[2]+ "." + time2[1] + "." + time2[0] + '</div>';
             };
             if (c_m["type"] == 3){
-            gener_sticker(c_m["id"], time[1].split(".")[0], c_m["html_m"], other, c_m['read'], c_m["name_sender"], c_m["pinned"]);
+            gener_sticker(c_m["id"], time[1].split(".")[0], c_m["html_m"], other, c_m['read'], c_m["name_sender"]);
         } else if (c_m["type"] == 2){
             gener_emoji(c_m["id"],  c_m["html_m"], other, c_m["text"]);
         } else {
-            gener_html(c_m["id"], c_m["text"], time[1].split(".")[0], c_m["html_m"], file, other, c_m['read'], c_m["name_sender"], c_m["pinned"]);
+            gener_html(c_m["id"], c_m["text"], time[1].split(".")[0],
+            c_m["html_m"], file, other, c_m['read'], c_m["name_sender"]);
         }
         }
+        for (let i = 0;i < json_mess["pinned_message"].length; i++){
+            add_pinned(json_mess["pinned_message"][i]);
+        }
+        cont.style.height = "100%";
         cont.innerHTML += '<div id="pos"><div id="pos2"></div></div>';
-        go()
+        go();
+        set_read(document.getElementById("chat_id").value);
         },
     error: function(err) {
         console.error(err);
@@ -374,6 +369,7 @@ function post_password() {
 }
 
 function delete_mess(id_mess){
+    exit_menu();
       $.ajax({
     url: '/m/delete',
     type: 'DELETE',
@@ -455,6 +451,8 @@ function block_user() {
 
 
 function answer(id_mess){
+//console.log(globalThis.menu_id,document.getElementById( globalThis.menu_id));
+
     exit_menu();
     var la = document.getElementById("edit-label");
     var t = document.getElementById("text" + id_mess).textContent.trim();
@@ -975,7 +973,7 @@ function pinned(id_mess){
         contentType:'application/json',
         data: JSON.stringify({"chat_id":chat_id, "mess_id": id_mess}),
         success: function(json){
-                add_pinned(id_mess);
+//                add_pinned(id_mess);
             },
         error: function(err) {
             console.error(err);
@@ -1048,14 +1046,6 @@ function unpin_chat(chat_id){
         }
     });
 }
-
-function exit_menu(){
-    if (menu_id != ""){
-        document.getElementById(menu_id).style.display = "none";
-        globalThis.menu_id = "";
-    }
-}
-
 
 
 function pin_chat(chat_id){

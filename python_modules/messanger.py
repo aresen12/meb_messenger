@@ -18,6 +18,38 @@ import json
 mg = Blueprint('messenger', __name__, url_prefix='/m')
 
 
+def send_alert(id_, db_sess, text, html=""):
+    chats = db_sess.query(Chat).filter(Chat.status == 1).all()
+    id_chat = None
+    for c in chats:
+        c: Chat
+        if f"0 {id_}" in c.members:
+            id_chat = c.id
+            break
+    if id_chat is None:
+        chat = Chat()
+        chat.members = f"0 {id_}"
+        chat.primary_chat = True
+        db_sess.add(chat)
+        db_sess.commit()
+        id_chat = chat.id
+        my_sess = SessionDB(f"db/chats/chat{id_chat}.db")
+        my_sess.create_table(Message())
+        emit("create_chat", {"chat_id": str(id_chat),
+                             "name": "kazbek", "is_primary": True},
+             to=f"u{id_}", namespace="/")
+    else:
+        my_sess = SessionDB(f"db/chats/chat{id_chat}.db")
+    mess = new_mess(text, 0, "Kazbek", html)
+    my_sess.add(mess)
+    my_sess.commit()
+    my_sess.close()
+    emit('message', {"message": "", "time": mess.get_time(), "id_m": mess.id.value,
+                     "file2": "", "html": mess.html_m.value, "name": "Kazbek",
+                     "read": 0, "id_sender": current_user.id, "pinned": mess.pinned.value, "type": mess.type.value},
+         to=f"u{id_}", namespace="/")
+
+
 @mg.route("/<flag>")
 @mg.route("/", methods=["GET", "POST"])
 def m_st(flag=1):
@@ -43,7 +75,7 @@ def m_st(flag=1):
             int(request.form["chat_id"])
             my_sess = SessionDB(f"db/chats/chat{request.form['chat_id']}.db")
             mess = new_mess(name_sender=c_user.name, message=request.form["about"], id_sender=c_user.id,
-                        html=request.form["html_m"])
+                            html=request.form["html_m"])
         except ValueError:
             my_sess = SessionDB(f"db/my/{request.form['chat_id']}.db")
             mess = new_mess_my(name_sender=c_user.name, message=request.form["about"], id_sender=c_user.id,
@@ -111,26 +143,28 @@ def get_black():
 @mg.route("/pinned", methods=["POST"])
 def pinned():
     data = request.get_json()
-    db_sess = SessionDB(f"db/chats/chat{data['chat_id']}.db")
-    mess = db_sess.query(Message()).filter(f"message.id = {data['mess_id']}").first()
-    mess.pinned.value = 1
-    db_sess.update(mess)
+    db_sess = db_session.create_session()
+    chat = db_sess.query(Chat).filter(Chat.id == data["chat_id"]).first()
+    tm = chat.pinned_messages.split()
+    tm.insert(0, str(data['mess_id']))
+    chat.pinned_messages = " ".join(tm)
+    emit("pinned_message", {"id_mess": data["mess_id"]}, to=data["chat_id"], namespace="/")
     db_sess.commit()
     db_sess.close()
-    # добавить socketio
     return {"log": True}
 
 
 @mg.route("/un_pinned", methods=["POST"])
 def an_pinned():
     data = request.get_json()
-    db_sess = SessionDB(f"db/chats/chat{data['chat_id']}.db")
-    mess = db_sess.query(Message()).filter(f"message.id = {data['mess_id']}").first()
-    mess.pinned.value = 0
-    db_sess.update(mess)
+    db_sess = db_session.create_session()
+    chat = db_sess.query(Chat).filter(Chat.id == data["chat_id"]).first()
+    p = chat.pinned_messages.split()
+    del p[p.index(str(data["mess_id"]))]
+    chat.pinned_messages = " ".join(p)
     db_sess.commit()
     db_sess.close()
-    # добавить socketio
+    emit("un_pinned_message", {"id_mess": data["mess_id"]}, to=data["chat_id"], namespace="/")
     return {"log": True}
 
 
@@ -180,6 +214,7 @@ def edit_mess():
         mess.read.value = 0
         db_sess.update(mess)
         db_sess.commit()
+    emit("edit_message", {"id_mess": data["id"]}, to=data["chat_id"])
     db_sess.close()
     return {"log": True}
 
@@ -265,7 +300,8 @@ def delete_mess():
         emit('delete_message', {"message_id": mes.id.value}, to=str(data["chat_id"]), namespace="/")
     else:
         emit('delete_emoji', {"message_id_on_emoji": mes.html_m.value,
-                              "id_emoji": mes.message.value, "id_sender": mes.id_sender.value, "id_message_emoji": mes.id},
+                              "id_emoji": mes.message.value, "id_sender": mes.id_sender.value,
+                              "id_message_emoji": mes.id},
              to=str(data["chat_id"]),  namespace="/")
     list_emoji = db_sess.query(Message()).filter("message.type = 2").filter(f"message.html_m = {data['id']}").all()
     for _ in list_emoji:
@@ -364,7 +400,7 @@ def edit_password():
 
 @mg.route("/get_part_messages")
 def get_part_messages():
-    data = request.get_json()
+    # data = request.get_json()
     new = []
     return new
 
@@ -381,7 +417,7 @@ def get_json_mess_my():
         for m in messages:
             js["messages"].append({"id": m[0], "read": m[1], "html_m": m[4], "text": m[2], 'time': m[8],
                                    "file": m[3], "id_sender": m[7], "name_sender": m[6],
-                               "pinned": m[5], "type": m[9]})
+                                   "pinned": m[5], "type": m[9]})
         sess.close()
         db_sess.close()
         return js
@@ -393,25 +429,20 @@ def get_json_message():
     if current_user.is_authenticated:
         data = request.get_json()
         db_sess = db_session.create_session()
-        mem = db_sess.query(Chat.members).filter(Chat.id == data["chat_id"]).first()
-        if not (str(current_user.id) in mem[0].split()):
+        chat = db_sess.query(Chat).filter(Chat.id == data["chat_id"]).first()
+        if not (str(current_user.id) in chat.members.split()):
             db_sess.close()
             return {"log": "Permission error"}
         db_sess.close()
         my_orm = SessionDB(f"db/chats/chat{data['chat_id']}.db")
         messages = my_orm.query(Message()).all()
-        js = {"messages": [], "files": get_files(data["chat_id"], db_sess), "current_user": current_user.id}
-        f = False
+        js = {"messages": [], "files": get_files(data["chat_id"], db_sess), "current_user": current_user.id,
+              "pinned_message": chat.pinned_messages.split()}
         messages.sort(key=lambda x: x[8])
         for m in messages:
-            # if m.id_sender != js["current_user"] and not m.read:
-            #     m.read = 1
-            #     f = True
             js["messages"].append({"id": m[0], "read": m[1], "html_m": m[4], "text": m[2], 'time': m[8],
                                    "file": m[3], "id_sender": m[7], "name_sender": m[6],
                                    "pinned": m[5], "type": m[9]})
-        if f:
-            db_sess.commit()
         my_orm.close()
         return js
     return {"log": "NOT auth"}
@@ -492,8 +523,10 @@ def get_cnt_m():
     chat = db_sess.query(Chat).filter(Chat.id == data["chat_id"]).first()
     ch_mem = chat.members.split()
     if str(current_user.id) in ch_mem:
-        c = db_sess.query(Message.id).filter(Message.chat_id == data["chat_id"]).all()
-        return {"len": len(c)}
+        # c = db_sess.query(Message.id).filter(Message.chat_id == data["chat_id"]).all()
+        # return {"len": len(c)}
+        # при необходимости переписать для my session
+        pass
     db_sess.close()
     return {"log": "PermissionError"}
 
@@ -532,8 +565,10 @@ def get_cnt_m_cast():
     chat = db_sess.query(Chat).filter(Chat.id == data["chat_id"]).first()
     ch_mem = chat.members.split()
     if str(current_user.id) in ch_mem:
-        c = db_sess.query(Message.id).filter(Message.chat_id == data["chat_id"]).all()
-        return {"len": len(c[-20:])}
+        # c = db_sess.query(Message.id).filter(Message.chat_id == data["chat_id"]).all()
+        # return {"len": len(c[-20:])}
+        # при необходимости переписать для my session
+        pass
     db_sess.close()
     return {"log": "PermissionError"}
 
@@ -560,6 +595,7 @@ def set_raed():
                 mess.time.value = m[8]
                 db_sess.update(mess)
                 db_sess.commit()
+                emit("set_read", {"id_mess": m[0]}, to=str(data["chat_id"]),  namespace="/")
     except Exception:
         print("error")
     db_sess.close()

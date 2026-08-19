@@ -46,8 +46,12 @@ function send_sticker(path){
 
             // Listen for messages from server
 socket.on('message', (data) => {
+    if (document.getElementById("chat_id").value == ""){
+        return;
+    }
     const messagesDiv = document.getElementById('content');
     document.getElementById("last_mess_id").value = data["id_m"];
+    set_read(document.getElementById("chat_id").value);
     var other = 1;
     if (id_user == data["id_sender"]){
         var other = 0;
@@ -82,6 +86,16 @@ socket.on('delete_chat', (data) => {
 socket.on('delete_message', (data) => {
     document.getElementById("m" + data["message_id"]).remove();
     console.log("m" + data["message_id"]);
+});
+
+
+socket.on('un_pinned_message', (data) => {
+    delete_pin_message(data["id_mess"]);
+});
+
+
+socket.on('pinned_message', (data) => {
+    add_pinned(data["id_mess"], first=true);
 });
 
 
@@ -120,9 +134,8 @@ socket.on('leave_event', (data) => {
 });
 
 
-socket.on('edit_mess', (data) => {
+socket.on('edit_message', (data) => {
    document.getElementById("text" + data["id_mess"]).textContent = data["new_text"];
-   console.log("edit soc")
 });
 
 socket.on('connect', () => {
@@ -139,15 +152,20 @@ socket.on('disconnect', () => {
 });
 
 
+socket.on('set_read', (data) => {
+    update_read_message(data["id_mess"]);
+});
+
+
 socket.on('message_other', (data) => {
     var rn = document.getElementById("rn" + data["chat_id"]);
     rn.style.display = "block";
     rn.innerText =  Number(rn.innerText) + 1;
     if (document.getElementById("chat_id").value != data["chat_id"]){
-        notification(data["text"], data["name"]);
+        notification(data["text"], data["chat_name"]);
         if (mobile){
             try {
-                android.send_my_alert(`${data["name"]}
+                android.send_my_alert(`${data["chat_name"]}
                 ${data["text"]}`);
             } catch(error){
 //                console.log("Не приложение")

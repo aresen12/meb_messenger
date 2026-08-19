@@ -4,7 +4,6 @@ from data import db_session
 from data.chat import Chat
 from data.my_orm.message import new_emoji, new_mess
 from data.user import User
-from python_modules.tg_bot.bot_def import send_all
 from data.my_orm.my_message import new_mess_my, new_emoji_my
 from data.my_orm.engine import SessionDB
 socketio = SocketIO(cors_allowed_origins="*")
@@ -67,7 +66,11 @@ def send_all2(db_sess, chat_members, text, c_id, name, prim, chat_id, time):
         text = "Возможно у вас новыее сообщения"
     for user_id in chat_members.split():
         if not (str(c_id) == user_id):
-            emit("message_other", {"text": text, "chat_id": chat_id, "user_name": name, "time": time}, to="u" + user_id)
+            if prim:
+                name_chat = name
+            else:
+                name_chat = name
+            emit("message_other", {"text": text, "chat_id": chat_id, "user_name": name, "time": time, "chat_name": name_chat}, to="u" + user_id)
 
 
 @socketio.on('room_message')
