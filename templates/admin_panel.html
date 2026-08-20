@@ -17,19 +17,21 @@
 </div>
 <div>
     <h2>Активность других администраторов</h2>
+    <div class="block-panel">
     <ul class="list-group">
     {% for i in range(activiti_list|length) %}
 <li class="list-group-item">
-    {{i + 1}}.
     {{activiti_list[i][0]}}
     {{activiti_list[i][1]}}
+    id {{activiti_list[i][3]}}
 </li>
     {% endfor %}
     </ul>
+    </div>
 </div>
 <div>
     <h2>Последнии действия администраторов</h2>
-    <ul class="list-group">
+    <ul class="list-group block-panel">
         {% for action in actions %}
         <li class="list-group-item">
             кто: {{action.id_user}}
@@ -43,9 +45,29 @@
 </div>
 </div>
 <div>
-    <div>
-        <h4>Голосования</h4>
+    <h2>Голосования</h2>
+    <div style="display: flex;">
+        {% for voting in votings %}
+        <div class="alert alert-info voting" role="alert" >
+            id user
+            {{voting.id_user}}
+            <h4>Описание к голосованию</h4>
+             <p>{{voting.text}}</p>
+            Разрешения
+            <ul>
+            {% for i in range(permissions|length) %}
+                    {% if (i + 1)| string in voting.permissions.split() %}
 
+                    <li class="list-group-item">
+                        {{permissions[i + 1]}}
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                </ul>
+            <button class="btn btn-success" onclick="send_admin_voting(true, {{voting.id}})">за</button>
+            <button class="btn  btn-danger" onclick="send_admin_voting(false, {{voting.id}})">против</button>
+        </div>
+        {% endfor %}
     </div>
     <div>
         <h4>Назначение новых администраторов, удаление, расширение, отзыв прав</h4>
@@ -56,22 +78,52 @@
                 разрещения
                 <ol>
                     {% for i in range(permissions|length) %}
+                    {% if (i + 1)| string in admin.permissions.split() %}
                     <li class="list-group-item">
-                        {% if (i + 1)| string in admin.permissions.split() %}
                         {{permissions[i + 1]}}
-                        {% endif %}
                     </li>
+                    {% endif %}
                     {% endfor %}
                 </ol>
             </li>
             {% endfor %}
         </ul>
-        <button class="info-btn btn-primary">Отправить на голосование</button>
+        <div>
+            <form method="post" class="form">
+                <h2>Изменение прав</h2>
+                <label>id admin</label>
+                <input name="id_admin">
+                            <label for="text">Описание к голосованию</label>
+            <textarea name="text" id="text"></textarea>
+                <h2>Права</h2>
+                {% for i in range(permissions|length) %}
+                <input name="p{{i + 1}}" type="checkbox" ><label>{{permissions[i + 1]}}</label><br>
+                {% endfor %}
+                <input type="submit" class="info-btn btn-primary" value="Отправить на голосование">
+            </form>
+        </div>
+
         <button class="info-btn btn-primary" onclick="show_no_admin()">Назначить нового администратора</button>
         <ul class="list-group:" id="new_admins"></ul>
         name new admin
         <input id="name_new_admin">
     </div>
+</div>
+<div>
+    <h3>Блокировка страниц</h3>
+    <label>код страницы</label>
+    <input id="block_cod">
+    <button class="btn btn-danger" onclick="send_block_page()">Заблокировать</button>
+    <button class="btn btn-success" onclick="send_unblock_page()">Разблокировать</button>
+    <h4>Заблокированные страницы</h4>
+    <ul>
+        {% for block in block_pages %}
+        <li>{{block}}</li>
+        {% endfor %}
+        {% if block_pages|length == 0 %}
+        нет заблокированных страниц
+        {% endif %}
+    </ul>
 </div>
 <script src="/static/javascript/panel/panel.js"></script>
 {% endblock %}

@@ -13,6 +13,7 @@ from python_modules.messanger import mg, send_alert
 from python_modules.admin_panel import panel
 from python_modules.events_io import socketio
 from python_modules.chats_action import chats_server
+from python_modules.keys import block_pages
 # from python_modules.tg_bot.bot_def import send_random_key
 from data.alerts import Alert
 
@@ -65,6 +66,8 @@ def login_device():
 
 @application.route('/login', methods=['GET', 'POST'])
 def login():
+    if "login" in block_pages:
+        return redirect("/")
     if current_user.is_authenticated:
         return redirect("/m")
     form = LoginForm()
@@ -88,6 +91,8 @@ def login():
     
 @application.route('/register', methods=['GET', 'POST'])
 def reqister():
+    if "register" in block_pages:
+        return redirect("/")
     form = RegisterForm()
     if form.validate_on_submit():
         if form.password.data != form.password_again.data:
