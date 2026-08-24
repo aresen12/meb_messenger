@@ -451,8 +451,11 @@ def get_json_message():
         db_sess.close()
         my_orm = SessionDB(f"db/chats/chat{data['chat_id']}.db", factory=True)
         messages = my_orm.query(Message()).all()
+        pinned_messages = []
+        if not (chat.pinned_messages is None):
+            pinned_messages = chat.pinned_messages.split()
         js = {"messages": [], "files": get_files(data["chat_id"], db_sess), "current_user": current_user.id,
-              "pinned_message": chat.pinned_messages.split()}
+              "pinned_message": pinned_messages}
         messages.sort(key=lambda x: x["time"])
         for m in messages:
             js["messages"].append({"id": m["id"], "read": m["read"], "html_m": m["html_m"], "text": m["message"],
