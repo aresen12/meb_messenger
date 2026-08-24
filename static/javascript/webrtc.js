@@ -34,24 +34,26 @@ function gener_jitsi(clear){
     } else {
         global_menu.innerHTML += '<div id="meet"></div>';
     }
-    const domain = 'meet.uni-dubna.ru';
+//    const domain = 'meet.uni-dubna.ru';
 
-
-
-const options = {
-    jwt: jwt_my,
-    configOverwrite: {
-breakoutRooms: {    hideAddRoomButton: true}},
-    roomName: room_name,
+    var options = {
+//    configOverwrite: {
+//breakoutRooms: {    hideAddRoomButton: true}},
+    roomName: "qwwertyuuDDDWDW" + document.getElementById("chat_id").value,
     width: '100%',
     height: document.getElementById("global_menu").offsetHeight,
     parentNode: document.querySelector('#meet'),
      userInfo: {
-//        email: document.getElementById("username").textContent,
+        email: document.getElementById("username").textContent,
         displayName: document.getElementById("name_user").textContent,
     }
-};
-const api = new JitsiMeetExternalAPI(domain, options);
+    };
+if (server_name == "meet.uni-dubna.ru"){
+    options["jwt"] = jwt_my;
+    options["roomName"] = room_name;
+
+}
+const api = new JitsiMeetExternalAPI(server_name, options);
 api.on('readyToClose', () => {
     api.dispose();
     document.getElementById("global_menu_d").style.display = "none";

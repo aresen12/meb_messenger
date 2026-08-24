@@ -37,13 +37,17 @@ def get_chats():
     admins = [_[0] for _ in db_sess.query(Admin.id_user).all()]
     for i in chats:
         admin_flag = False
-        if str(current_user.id) in i.members.split():
+        if current_user.id in list(map(int, i.members.split())):
             name = i.name
             if i.primary_chat:
                 id_user = i.members.split()
                 del id_user[id_user.index(str(current_user.id))]
                 id_user = id_user[0]
-                name = db_sess.query(User.name).filter(User.id == id_user).first()[0]
+                name = db_sess.query(User.name).filter(User.id == int(id_user)).first()
+                if name is None:
+                    name = "DELETED"
+                else:
+                    name = name[0]
                 if int(id_user) in admins:
                     admin_flag = True
             my_sess = SessionDB(f"db/chats/chat{i.id}.db", factory=True)

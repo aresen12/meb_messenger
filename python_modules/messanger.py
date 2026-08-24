@@ -9,9 +9,8 @@ from data.chat import Chat, get_chats
 from data.File import File, get_files, get_unique_file_name
 from data.black_list import Black
 from flask_socketio import emit
-from data.bot_db import BotDB
 from data.my_orm.my_message import MyMessage, new_mess_my
-from python_modules.keys import room_name, jwt
+from python_modules.keys import room_name, jwt, source_meet, server_name
 from data.my_orm.message import Message, new_mess
 from data.my_orm.engine import SessionDB
 import json
@@ -61,7 +60,7 @@ def m_st(flag=1):
             file___.close()
             return render_template("messenger.html", device="", meta_data=metadata,
                                    title='Kazbek', chats=chats, my_bg=current_user.id, room_name=room_name, jwt_my=jwt,
-                                   flag=flag)
+                                   flag=flag, server_name=server_name[source_meet])
         return redirect("/login")
     else:
         if not current_user.is_authenticated:

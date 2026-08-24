@@ -8,7 +8,7 @@ from data.user import User
 from data.alerts import new_alert, Alert
 from data.actions import Action, new_action
 from data.admin_voting import Voting
-from python_modules.keys import block_pages
+from python_modules.keys import block_pages, source_meet
 import datetime
 
 panel = Blueprint('admin_panel', __name__, url_prefix='/panel')
@@ -27,8 +27,6 @@ def main_page():
             voting = db_sess.query(Voting).all()
             actions = db_sess.query(Action).all()
             db_sess.close()
-            for ad in activiti:
-                print(ad.permissions)
             return render_template("admin_panel.html", votings=voting, activiti_list=activiti, user_list=users,
                                   actions=actions, permissions=permissions, block_pages=block_pages)
         return {"log": "Not authenticated"}
@@ -83,6 +81,12 @@ def delete_user():
         db_sess.commit()
         db_sess.close()
         return {"log": "Успешно"}
+
+@panel.route("/set_source/<source>")
+def set_source(source):
+    global source_meet
+    source_meet = source
+    return {"log": 200}
 
 
 @panel.route("/block_user", methods=["POST"])
