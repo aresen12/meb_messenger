@@ -12,7 +12,6 @@ def new_mess_my(message, id_sender, name_sender, html, file_id="", read=False, p
     mess.message.value = message
     mess.id_sender.value = id_sender
     mess.name_sender.value = name_sender
-    mess.pinned.value = pinned_m
     mess.read.value = read
     mess.img.value = file_id
     mess.html_m.value = html

@@ -42,6 +42,18 @@ def mg_get_chats():
     return {"chats": get_chats()}
 
 
+@chats_server.route("/edit_name_chat", methods=["POST"])
+def edit_name_chat():
+    data = request.get_json()
+    db_sess = db_session.create_session()
+    chat = db_sess.query(Chat).filter(Chat.id == data["chat_id"]).first()
+    if str(current_user.id) in chat.members.split():
+        chat.name = data["new_name"]
+    db_sess.commit()
+    db_sess.close()
+    return {'log': True}
+
+
 @chats_server.route("/block_chat", methods=["POST"])
 def block_chat():
     data = request.get_json()  # нужно добавить в чёрный список у пользователя

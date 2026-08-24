@@ -192,8 +192,9 @@ color:white;
 
 
 .edit-cont {
-    position:relative;
-    left:40px;
+    width: 35vw;
+    margin:auto;
+    overflow-y:auto;
 }
 .form-group {
 margin:none; margin-top: 10px;
@@ -500,4 +501,15 @@ width:100vw;
     text-decoration:none;
 }
 
+.voting-cont{
+    width: 34vw;
+    margin:auto;
+}
 
+.text-voting{
+    font-weight: bold;
+}
+
+.voting-item {
+    display:flex;
+}

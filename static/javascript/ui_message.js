@@ -375,3 +375,124 @@ function go_pin(id_mess){
     }
 
 }
+
+function gener_in_voting(id_mess, in_voting, data, all_cnt, i){
+    let div = document.createElement("div");
+    if (in_voting){
+            let div2 = document.createElement("div");
+            div2.style.display = "flex";
+            let div3 = document.createElement("div");
+            let progress = document.createElement("progress");
+            let label = document.createElement("label");
+            label.textContent = data["voting"][i]["text"];
+            div3.textContent = `${((data["voting"][i]["cnt"].length / all_cnt) * 100).toFixed(0)}%`;
+            div3.id = `math_v${id_mess}_${i}`;
+            progress.id = `pr_${id_mess}_${i}`;
+            if (all_cnt != 0){
+                progress.value = data["voting"][i]["cnt"].length / all_cnt;
+            } else {
+                progress.value = 0;
+            }
+            div.appendChild(label);
+            div2.appendChild(progress);
+            div2.appendChild(div3);
+            div.appendChild(div2);
+        }else{
+            let button = document.createElement("button");
+            button.innerHTML = `
+    <input class="form-check-input mt-0" type="radio" value="" aria-label="Radio button for following text input">
+    ${data["voting"][i]["text"]}`;
+            button.classList = "btn";
+            button.setAttribute("onclick", `voting(${id_mess}, ${i})`);
+            div.appendChild(button);
+        }
+            return div;
+}
+
+
+function voting_show(id_mess, data){
+    let tp = document.getElementById(`pr_${id_mess}_${1}`);
+    let in_last = false;
+    if (tp){
+        in_last = true;
+    }
+    let in_voting = false;
+    let all_cnt = 0;
+    for (let i = 0; i < data["voting"].length; i++){
+        all_cnt += data["voting"][i]["cnt"].length;
+        if (data["voting"][i]["cnt"].includes(id_user)){
+            in_voting = true;
+        }
+    }
+    let html_text = document.getElementById(`h${id_mess}`);
+    if (!in_last){
+        html_text.innerHTML = '';
+    }
+    for (let i = 0; i < data["voting"].length; i++){
+        if (in_last){
+            let progress = document.getElementById(`pr_${id_mess}_${i}`);
+            progress.value = data["voting"][i]["cnt"].length / all_cnt;
+            let text_div = document.getElementById(`math_v${id_mess}_${i}`);
+            text_div.textContent = `${((data["voting"][i]["cnt"].length / all_cnt) * 100).toFixed(0)}%`;
+        } else{
+            html_text.appendChild(gener_in_voting(id_mess, in_voting, data, all_cnt, i));
+        }
+    }
+}
+
+
+function gener_voting(id_mess, text, data, other, read, name_sender, time){
+     const messagesDiv = document.getElementById('content');
+     const messageItem = document.createElement('div');
+    if (other) {
+        messageItem.classList = 'message-other';
+    } else{
+        messageItem.classList = 'my-message';
+    };
+    const message_text = document.createElement('p');
+    message_text.classList = "text-in-mess text-voting";
+    message_text.id = 'text' + id_mess;
+    message_text.textContent = text;
+    const html_text = document.createElement('div');
+    let in_voting = false;
+    let all_cnt = 0;
+    for (let i = 0; i < data["voting"].length; i++){
+        all_cnt += data["voting"][i]["cnt"].length;
+        if (data["voting"][i]["cnt"].includes(id_user)){
+            in_voting = true;
+        }
+    }
+    for (let i = 0; i < data["voting"].length; i++){
+        html_text.appendChild(gener_in_voting(id_mess, in_voting, data, all_cnt, i))
+    }
+    var em_div = document.createElement("div");
+    em_div.id = "v" + id_mess;
+    html_text.id = `h${id_mess}`;
+    messageItem.appendChild(em_div);
+    messageItem.appendChild(message_text);
+    messageItem.appendChild(html_text);
+    messageItem.role = "alert";
+     const time_div = document.createElement('p');
+     time_div.classList = "time-mess";
+     if (other){
+        time_div.textContent = time + " " + name_sender;
+     }else{
+        time_div.textContent = time;
+     }
+     messageItem.appendChild(time_div);
+    if (read){
+        time_div.innerHTML += '<button type="button" class="info-btn "\
+         data-bs-toggle="tooltip" data-bs-placement="top" title="прочитано">ᨒ</button>';
+    } else{
+        time_div.innerHTML += `<button id="mr${id_mess}" type="button" class="info-btn "
+         data-bs-toggle="tooltip" data-bs-placement="top" title="доставлено">ᨈ</button>`;
+    }
+    const menu_con = document.createElement("div");
+    menu_con.style.display = "none";
+    menu_con.classList.add("context-menu-open");
+    menu_con.id = "mm" + id_mess;
+    messageItem.appendChild(menu_con);
+    messageItem.id = 'm' + id_mess;
+    messagesDiv.appendChild(messageItem);
+    scrollToBottom("content");
+}

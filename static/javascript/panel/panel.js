@@ -17,6 +17,46 @@ function delete_user(delete_id){
 }
 
 
+function block_user(delete_id){
+    var password = document.getElementById("password").value;
+    $.ajax({
+        url: '/panel/block_user',
+        type: 'POST',
+        dataType: 'json',
+        contentType:'application/json',
+        data: JSON.stringify({"user_id": delete_id, "password": password}),
+        success: function(json_data){
+            alert("успешно")
+        },
+        error: function(err) {
+            alert("Наверное пароль не правильный")
+            console.error(err);
+        }
+    });
+}
+
+
+function unblock_user(delete_id){
+    var password = document.getElementById("password").value;
+    $.ajax({
+        url: '/panel/unblock_user',
+        type: 'POST',
+        dataType: 'json',
+        contentType:'application/json',
+        data: JSON.stringify({"user_id": delete_id, "password": password}),
+        success: function(json_data){
+            alert("успешно")
+        },
+        error: function(err) {
+            alert("Наверное пароль не правильный")
+            console.error(err);
+        }
+    });
+}
+
+
+
+
 function send_block_page(){
      var password = document.getElementById("password").value;
      let delete_id = document.getElementById("block_cod").value;

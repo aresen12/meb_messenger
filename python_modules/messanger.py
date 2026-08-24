@@ -23,7 +23,7 @@ def send_alert(id_, db_sess, text, html=""):
     id_chat = None
     for c in chats:
         c: Chat
-        if f"0 {id_}" in c.members:
+        if f"0 {id_}" == c.members:
             id_chat = c.id
             break
     if id_chat is None:
@@ -46,7 +46,7 @@ def send_alert(id_, db_sess, text, html=""):
     my_sess.close()
     emit('message', {"message": "", "time": mess.get_time(), "id_m": mess.id.value,
                      "file2": "", "html": mess.html_m.value, "name": "Kazbek",
-                     "read": 0, "id_sender": current_user.id, "pinned": mess.pinned.value, "type": mess.type.value},
+                     "read": 0, "id_sender": current_user.id, "type": mess.type.value},
          to=f"u{id_}", namespace="/")
 
 
@@ -66,10 +66,15 @@ def m_st(flag=1):
     else:
         if not current_user.is_authenticated:
             return redirect("/login")
+
         f = request.files["img"]
         if request.form["about"].strip() == "" and f.filename == "" and request.form["html_m"] == "":
             return redirect('/m')
         db_sess = db_session.create_session()
+        chat = db_sess.query(Chat).filter(Chat.id == request.form['chat_id']).first()
+        if not (current_user.id in map(int, chat.members.split())):
+            db_sess.close()
+            return redirect("/")
         c_user = db_sess.query(User).filter(User.email == current_user.email).first()
         try:
             int(request.form["chat_id"])
@@ -227,7 +232,7 @@ def send_voice(chat_id):
     else:
         sess_my = SessionDB(f"db/chats/chat{chat_id}.db")
     f = request.files['voice']
-    path = f"data/{get_unique_file_name('voting.mps3', db_sess)}"
+    path = f"data/{get_unique_file_name('voice.mp3', db_sess)}"
     file = open(f"static/img/{path}", mode="wb")
     file.write(f.read())
     file.close()
@@ -273,6 +278,56 @@ def get_user(id_):
     n = user.name
     e = user.email
     return {"user": n, "email": e}
+
+
+@mg.route("/voting", methods=["POST"])
+def voting_server():
+    data = request.get_json()
+    db_sess = db_session.create_session()
+    chat = db_sess.query(Chat).filter(Chat.id == data['chat_id']).first()
+    if not (current_user.id in map(int, chat.members.split())):
+        return {"log": "not auth"}
+    if str(data['chat_id'])[0] == "m":
+        sess_my = SessionDB(f"db/my/{data['chat_id']}.db")
+    else:
+        sess_my = SessionDB(f"db/chats/chat{data['chat_id']}.db")
+    message = sess_my.query(Message()).filter(f"message.id = {data['mess_id']}").first()
+    json_voting = json.loads(message.html_m.value)
+    json_voting["voting"][data["i"]]["cnt"].append(current_user.id)
+    message.html_m.value = json.dumps(json_voting)
+    sess_my.update(message)
+    sess_my.commit()
+    sess_my.close()
+    db_sess.close()
+    emit("voting", {"id_voting": data["mess_id"], "chat_id": data['chat_id'], 'voting': json_voting}, to=data["chat_id"], namespace="/")
+    return {"log": 200}
+
+
+@mg.route("/create_voting", methods=["POST"])
+def create_voting_server():
+    data = request.get_json()
+    db_sess = db_session.create_session()
+    chat = db_sess.query(Chat).filter(Chat.id == data['chat_id']).first()
+    if not (current_user.id in map(int, chat.members.split())):
+        return {"log": "not auth"}
+    gener_json = {"voting": []}
+    keys = data["voting"].keys()
+    for key in keys:
+        gener_json["voting"].append({"text": data["voting"][key], "cnt": []})
+    if str(data['chat_id'])[0] == "m":
+        sess_my = SessionDB(f"db/my/{data['chat_id']}.db")
+    else:
+        sess_my = SessionDB(f"db/chats/chat{data['chat_id']}.db")
+    print(data)
+    message = new_mess(data["title_voting"], current_user.id, current_user.name, json.dumps(gener_json), type=4)
+    sess_my.add(message)
+    sess_my.commit()
+    emit("new_voting", {"id_mess": message.id.value, "text": data["title_voting"], "voting": gener_json,
+                        "id_sender": current_user.id, "name_sender": current_user.name, "time": message.get_time()},
+         to=data["chat_id"], namespace="/")
+    sess_my.close()
+
+    return {"log": 200}
 
 
 @mg.route("/get_chat_user/<int:id_>")  # chat id
@@ -340,62 +395,22 @@ def c_get_user():
     return {"user": None}
 
 
-@mg.route("/set_username_tg", methods=["POST"])
-def ser_username_tg():
-    if current_user.is_authenticated:
-        db_sess = db_session.create_session()
-        data = request.get_json()
-        user = db_sess.query(BotDB).filter(BotDB.id_user == current_user.id).first()
-        if user is None:
-            user = BotDB()
-            user.id_user = current_user.id
-            db_sess.add(user)
-            db_sess.commit()
-        user.user_name = data["username"]
-        db_sess.commit()
-        db_sess.close()
-        return {"log": True}
-    return {"log": False}
-
-
-@mg.route("/edit_name_chat", methods=["POST"])
-def edit_name_chat():
-    data = request.get_json()
-    db_sess = db_session.create_session()
-    chat = db_sess.query(Chat).filter(Chat.id == data["chat_id"]).first()
-    if str(current_user.id) in chat.members.split():
-        chat.name = data["new_name"]
-    db_sess.commit()
-    db_sess.close()
-    return {'log': True}
-
-
-@mg.route("/edit_prof", methods=["POST"])
-def edit_prof():
-    if current_user.id is None:
-        return {"log": False}
-    data = request.get_json()
-    db_sess = db_session.create_session()
-    user = db_sess.query(User).filter(User.id == current_user.id).first()
-    user.email = data["email"]
-    user.name = data["name"]
-    db_sess.commit()
-    db_sess.close()
-    return {"log": True}
-
-
-@mg.route("/edit_password", methods=["POST"])
-def edit_password():
-    if current_user.id is None:
-        return {"log": False}
-    data = request.get_json()
-    db_sess = db_session.create_session()
-    user = db_sess.query(User).filter(User.id == current_user.id).first()
-    if user.check_password(data["old_password"]):
-        user.set_password(data["new_password"])
-        db_sess.commit()
-    db_sess.close()
-    return {"log": True}
+# @mg.route("/set_username_tg", methods=["POST"])
+# def ser_username_tg():
+#     if current_user.is_authenticated:
+#         db_sess = db_session.create_session()
+#         data = request.get_json()
+#         user = db_sess.query(BotDB).filter(BotDB.id_user == current_user.id).first()
+#         if user is None:
+#             user = BotDB()
+#             user.id_user = current_user.id
+#             db_sess.add(user)
+#             db_sess.commit()
+#         user.user_name = data["username"]
+#         db_sess.commit()
+#         db_sess.close()
+#         return {"log": True}
+#     return {"log": False}
 
 
 @mg.route("/get_part_messages")
@@ -409,15 +424,16 @@ def get_part_messages():
 def get_json_mess_my():
     if current_user.is_authenticated:
         data = request.get_json()
-        db_sess = SessionDB(f"db/my/my{data['chat_id']}.db")
+        db_sess = SessionDB(f"db/my/my{data['chat_id']}.db", factory=True)
         messages = db_sess.query(MyMessage()).all()
         sess = db_session.create_session()
-        js = {"messages": [], "files": get_files("my" + data["chat_id"], sess)}
+        js = {"messages": [], "files": get_files("my" + data["chat_id"], sess), "pinned_message": []}
         messages.sort(key=lambda x: x[8])
         for m in messages:
-            js["messages"].append({"id": m[0], "read": m[1], "html_m": m[4], "text": m[2], 'time': m[8],
-                                   "file": m[3], "id_sender": m[7], "name_sender": m[6],
-                                   "pinned": m[5], "type": m[9]})
+            js["messages"].append({"id": m["id"], "read": m["read"], "html_m": m['html_m'], "text": m["message"],
+                                   'time': m["time"], "file": m['img'], "id_sender": m["id_sender"],
+                                   "name_sender": m["name_sender"],
+                                   "type": m['type']})
         sess.close()
         db_sess.close()
         return js
@@ -434,15 +450,15 @@ def get_json_message():
             db_sess.close()
             return {"log": "Permission error"}
         db_sess.close()
-        my_orm = SessionDB(f"db/chats/chat{data['chat_id']}.db")
+        my_orm = SessionDB(f"db/chats/chat{data['chat_id']}.db", factory=True)
         messages = my_orm.query(Message()).all()
         js = {"messages": [], "files": get_files(data["chat_id"], db_sess), "current_user": current_user.id,
               "pinned_message": chat.pinned_messages.split()}
-        messages.sort(key=lambda x: x[8])
+        messages.sort(key=lambda x: x["time"])
         for m in messages:
-            js["messages"].append({"id": m[0], "read": m[1], "html_m": m[4], "text": m[2], 'time': m[8],
-                                   "file": m[3], "id_sender": m[7], "name_sender": m[6],
-                                   "pinned": m[5], "type": m[9]})
+            js["messages"].append({"id": m["id"], "read": m["read"], "html_m": m["html_m"], "text": m["message"],
+                                   'time': m["time"], "file": m["img"], "id_sender": m["id_sender"],
+                                   "name_sender": m["name_sender"], "type": m["type"]})
         my_orm.close()
         return js
     return {"log": "NOT auth"}
@@ -481,13 +497,14 @@ def mail():
         sess_other_chat = SessionDB(f"db/chats/chat{data['mail_id_chat']}.db")
         message = sess_my_chat.query(Message()).filter(f"message.id = {data['mess_id']}").first()
         new_mail = new_mess(message.message.value, message.id_sender.value, message.name_sender.value,
-                            message.html_m.value, message.img.value)
+                            message.html_m.value, message.img.value, type=message.type.value)
         sess_other_chat.add(new_mail)
         sess_other_chat.commit()
         if message.img != "":
-            file = db_sess.query(File).filter(File.id == message.id).first()
-            file.list_messages += f" {new_mail.id}"
-            db_sess.commit()
+            file = db_sess.query(File).filter(File.id == message.id.value).first()
+            if not (file is None):
+                file.list_messages += f" {new_mail.id}"
+                db_sess.commit()
         sess_my_chat.close()
         sess_other_chat.close()
         db_sess.close()
@@ -585,17 +602,17 @@ def users_bg():
 @mg.route("/set_read", methods=["POST"])
 def set_raed():
     data = request.get_json()
-    db_sess = SessionDB(f"db/chats/chat{data['chat_id']}.db")
+    db_sess = SessionDB(f"db/chats/chat{data['chat_id']}.db", factory=True)
     mess = db_sess.query(Message()).filter("message.read = 0").all()
     try:
         for m in mess:
-            if current_user.id != m[7]:
-                mess = new_mess(m[2], m[7], m[6], m[4], m[3], 1, m[5], m[9])
-                mess.id.value = m[0]
-                mess.time.value = m[8]
+            if current_user.id != m["id_sender"]:
+                mess = new_mess(m['message'], m["id_sender"], m["name_sender"], m["html_m"], m['img'], 1, m["type"])
+                mess.id.value = m["id"]
+                mess.time.value = m["time"]
                 db_sess.update(mess)
                 db_sess.commit()
-                emit("set_read", {"id_mess": m[0]}, to=str(data["chat_id"]),  namespace="/")
+                emit("set_read", {"id_mess": m['id']}, to=str(data["chat_id"]),  namespace="/")
     except Exception:
         print("error")
     db_sess.close()
@@ -605,13 +622,13 @@ def set_raed():
 @mg.route("/get_new_message_id/<id_mess>/<chat_id>")
 def get_new_message_id(id_mess, chat_id):
     if current_user.is_authenticated:
-        db_sess = SessionDB(f"db/chats/chat{chat_id}.db")
+        db_sess = SessionDB(f"db/chats/chat{chat_id}.db", factory=True)
         messages = db_sess.query(Message()).filter(f"message.id > {id_mess}").all()
         js = {"message": []}
         for message in messages:
-            js["message"].append({"id": message[0], "id_sender": message[7],
-                                  "html": message[4], "read": message[1], "text": message[2],
-                                  "time": message[8], "pinned": message[5],
-                                  "name_sender": message[6], "type": message[9]})
+            js["message"].append({"id": message["id"], "id_sender": message['id_sender'],
+                                  "html": message["html_m"], "read": message["read"], "text": message['message'],
+                                  "time": message['time'], "name_sender": message["name_sender"],
+                                  "type": message["type"]})
         db_sess.close()
         return js

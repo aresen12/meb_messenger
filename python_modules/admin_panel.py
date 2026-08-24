@@ -77,13 +77,54 @@ def delete_user():
             # не помню коды точно bad req
         admin.time_activiti = datetime.datetime.now()
         user = db_sess.query(User).filter(User.id == data["user_id"]).first()
-        user.password = ""
-        user.name = "Удаленный аккаунт"
-        action = new_action(1, current_user.id)
+        action = new_action(1, current_user.id, user_id=data["user_id"])
+        db_sess.delete(user)
         db_sess.add(action)
         db_sess.commit()
         db_sess.close()
         return {"log": "Успешно"}
+
+
+@panel.route("/block_user", methods=["POST"])
+def block_user():
+    data = request.get_json()
+    if current_user.is_authenticated:
+        db_sess = db_session.create_session()
+        admin = db_sess.query(Admin).filter(Admin.id_user == current_user.id).first()
+        if admin is None or not ("2" in admin.permissions.split()) or not admin.check_password(data["password"]):
+            db_sess.close()
+            return abort(400)
+            # не помню коды точно bad req
+        admin.time_activiti = datetime.datetime.now()
+        user = db_sess.query(User).filter(User.id == data["user_id"]).first()
+        action = new_action(5, current_user.id, user_id=data["user_id"])
+        user.block = True
+        db_sess.add(action)
+        db_sess.commit()
+        db_sess.close()
+        return {"log": "Успешно"}
+    return redirect("/login")
+
+
+@panel.route("/unblock_user", methods=["POST"])
+def unblock_user():
+    data = request.get_json()
+    if current_user.is_authenticated:
+        db_sess = db_session.create_session()
+        admin = db_sess.query(Admin).filter(Admin.id_user == current_user.id).first()
+        if admin is None or not ("2" in admin.permissions.split()) or not admin.check_password(data["password"]):
+            db_sess.close()
+            return abort(400)
+            # не помню коды точно bad req
+        admin.time_activiti = datetime.datetime.now()
+        user = db_sess.query(User).filter(User.id == data["user_id"]).first()
+        action = new_action(6, current_user.id, user_id=data["user_id"])
+        user.block = False
+        db_sess.add(action)
+        db_sess.commit()
+        db_sess.close()
+        return {"log": "Успешно"}
+    return {"log": "not auth"}
 
 
 @panel.route("/news", methods=["GET", "POST"])

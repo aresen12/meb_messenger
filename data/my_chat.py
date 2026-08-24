@@ -21,7 +21,7 @@ class MYChat(SqlAlchemyBase, UserMixin, SerializerMixin):
 def get_my_chat():
     db_sess = db_session.create_session()
     chat = db_sess.query(MYChat).filter(MYChat.id == current_user.id).first()
-    my_sess = SessionDB(f"db/my/my{current_user.id}.db")
+    my_sess = SessionDB(f"db/my/my{current_user.id}.db", factory=True)
     if chat is None:
         my_chat = MYChat()
         my_chat.id = current_user.id
@@ -38,8 +38,8 @@ def get_my_chat():
         mess = mess2[-1]
         db_sess.close()
         return {"id": f"my{chat.id}", "pinned": chat.pinned,
-                "last_message": {"text": mess[2], "time": mess[8],
-                                 "name_sender": mess[6], "type": mess[9]}}
+                "last_message": {"text": mess["message"], "time": mess["time"],
+                                 "name_sender": mess["name_sender"], "type": mess["type"]}}
     db_sess.close()
     my_sess.close()
     return {"id": f"my{chat.id}", "pinned": chat.pinned,

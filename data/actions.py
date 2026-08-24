@@ -30,6 +30,10 @@ def new_action(type_, id_action, user_id=0, comment=""):
         action.about = "Добавление администратора"
     elif type_ == 4:
         action.about = "Голосование"
+    elif type_ == 5:
+        action.about = f"Блокировка пользователя {user_id}"
+    elif type_ == 6:
+        action.about = f"Разлокировка пользователя {user_id}"
     else:
         pass
     if comment != "":

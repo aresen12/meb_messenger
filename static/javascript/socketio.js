@@ -93,6 +93,17 @@ socket.on('un_pinned_message', (data) => {
     delete_pin_message(data["id_mess"]);
 });
 
+socket.on('voting', (data) => {
+
+    voting_show(data["id_voting"], data["voting"]);
+});
+
+
+socket.on('new_voting', (data) => {
+    let other = !(id_user == data["id_sender"]);
+    gener_voting(data["id_mess"], data["text"], data["voting"], other, 0, data["name_sender"], data["time"]);
+});
+
 
 socket.on('pinned_message', (data) => {
     add_pinned(data["id_mess"], first=true);

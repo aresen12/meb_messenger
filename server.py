@@ -4,7 +4,7 @@ from flask import Flask, request, render_template, redirect
 from python_modules.forms.login_form import LoginForm
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from data import db_session
-from data.user import User
+from data.user import User, check_username
 from python_modules.forms.register_form import RegisterForm
 from python_modules.api import api
 from data.reset_passwords import DCode
@@ -74,7 +74,7 @@ def login():
     if form.validate_on_submit():
         db_sess = db_session.create_session()
         user = db_sess.query(User).filter(User.email== form.username.data).first()
-        if user and user.check_password(form.password.data):
+        if user and user.check_password(form.password.data) and not user.block:
             login_user(user, remember=form.remember_me.data, duration=datetime.timedelta(hours=24*90))
             send_alert(user.id, db_sess, "Внимание!!!", f"""<b>В ваш аккаунт выполнен вход!</b
                 <p>
@@ -87,7 +87,38 @@ def login():
                                message="Неправильный логин или пароль",
                                form=form)
     return render_template('login.html', title='Авторизация', form=form)   
-    
+
+
+@application.route("/edit_prof", methods=["POST"])
+def edit_prof():
+    if current_user.id is None:
+        return {"log": False}
+    data = request.get_json()
+    db_sess = db_session.create_session()
+    user = db_sess.query(User).filter(User.id == current_user.id).first()
+    if user.email != data["email"] and (not check_username(db_sess=db_sess, username=data["email"])):
+        db_sess.close()
+        return {"log": "bad username"}
+    user.email = data["email"]
+    user.name = data["name"]
+    db_sess.commit()
+    db_sess.close()
+    return {"log": True}
+
+
+@application.route("/edit_password", methods=["POST"])
+def edit_password():
+    if current_user.id is None:
+        return {"log": False}
+    data = request.get_json()
+    db_sess = db_session.create_session()
+    user = db_sess.query(User).filter(User.id == current_user.id).first()
+    if user.check_password(data["old_password"]):
+        user.set_password(data["new_password"])
+        db_sess.commit()
+    db_sess.close()
+    return {"log": True}
+
     
 @application.route('/register', methods=['GET', 'POST'])
 def reqister():
@@ -100,7 +131,7 @@ def reqister():
                                    form=form,
                                    message="Пароли не совпадают")
         db_sess = db_session.create_session()
-        if db_sess.query(User).filter(User.email == form.email.data).first():
+        if not check_username(db_sess=db_sess, username=form.email.data):
             db_sess.close()
             return render_template('register.html', title='Регистрация',
                                    form=form,

@@ -12,6 +12,11 @@
         <h5>USERNAME</h5>
         {{user.email}}(id_user: {{user.id}})
         <button class="btn btn-secondary" onclick="delete_user({{user.id}})">Удалить</button>
+        {% if user.block %}
+            <button class="btn btn-secondary" onclick="unblock_user({{user.id}})">Разблокировать</button>
+        {% else %}
+            <button class="btn btn-secondary" onclick="block_user({{user.id}})">Блокировать</button>
+        {% endif %}
     </div>
     {% endfor %}
 </div>

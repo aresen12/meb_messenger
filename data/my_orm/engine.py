@@ -3,19 +3,22 @@ from data.my_orm.tables import Table
 
 
 class SessionDB:
-    def __init__(self, name_db):
+    def __init__(self, name_db, factory=False):
         self.connection = None
         self.connection: sqlite3.Connection
         self.cursor = None
         self.name_db = name_db
-        self.connect(name_db)
+        self.connect(name_db, factory)
         self.current_table = None
         self.sql_text = ""
+        self.factory = factory
 
-    def connect(self, name_db=""):
+    def connect(self, name_db="", row=False):
         if name_db == "":
             self.connection = sqlite3.connect(self.name_db)
         self.connection = sqlite3.connect(name_db)
+        if row:
+            self.connection.row_factory = sqlite3.Row
         self.cursor = self.connection.cursor()
 
     def close(self):

@@ -12,11 +12,11 @@ class Message(Table):
         self.message = TextColumn("message")    # 2
         self.img = TextColumn("img")  # 3
         self.html_m = TextColumn("html_m")  # 4
-        self.pinned = BoolColumn("pinned")  # 5
-        self.name_sender = TextColumn("name_sender")  # 6
-        self.id_sender = INEGERColumn("id_sender")  # 7
-        self.time = DataTime("time")  # 8
-        self.type = INEGERColumn("type")  # 9
+        # self.pinned = BoolColumn("pinned")  # 5
+        self.name_sender = TextColumn("name_sender")  # 6 5
+        self.id_sender = INEGERColumn("id_sender")  # 7 6
+        self.time = DataTime("time")  # 8 7
+        self.type = INEGERColumn("type")  # 9 8
 
     def get_date(self):
         date = str(self.time.value).split()[0].split("-")
@@ -26,12 +26,11 @@ class Message(Table):
         return str(self.time.value).split()[1]
 
 
-def new_mess(message, id_sender, name_sender, html="", file_id="", read=False, pinned_m=False, type=1):
+def new_mess(message, id_sender, name_sender, html="", file_id="", read=False, type=1):
     mess = Message()
     mess.message.value = message    
     mess.id_sender.value = id_sender
     mess.name_sender.value = name_sender
-    mess.pinned.value = pinned_m
     mess.read.value = read
     mess.img.value = file_id
     mess.html_m.value = html

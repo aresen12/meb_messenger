@@ -198,6 +198,9 @@ function edit_prof_html(){
         success: function(json){
             menu.innerHTML = '<h2>Редактировать профиль</h2><button onclick="close_global_menu()" type="button" class="btn-close gl-btn-close" aria-label="Close"></button>';
             var p_group = document.createElement("div");
+            let div = document.createElement("div");
+            div.innerHTML = `<span class="input-group-text" id="basic-addon1">@</span>`;
+            div.classList = "input-group mb-3";
             p_group.id = "p_group";
             p_group.classList = "edit-cont";
             p_group.style.display = "none";
@@ -207,6 +210,7 @@ function edit_prof_html(){
             var name_edit = document.createElement("input");
             name_edit.id = "name_edit";
             name_edit.value = json["user"]["name"];
+            name_edit.classList = "form-control";
             var name_p = document.createElement("p");
             name_p.textContent = "Имя";
             edit_cont.appendChild(name_p);
@@ -217,7 +221,9 @@ function edit_prof_html(){
             var email_edit = document.createElement("input");
             email_edit.id = "email_edit";
             email_edit.value = json["user"]["email"];
-            edit_cont.appendChild(email_edit);
+            email_edit.classList = "form-control";
+            div.appendChild(email_edit);
+            edit_cont.appendChild(div);
             var save_btn = document.createElement("button");
             save_btn.classList = "edit-btn";
             save_btn.textContent = "Сохранить";
@@ -409,4 +415,89 @@ function exit_menu(){
         } catch (error){}
         globalThis.menu_id = "";
     }
+}
+
+
+function exit_chat(){
+    var st_chat = document.getElementById("chat_id").value;
+    try {
+        document.getElementById("menu_chat_div_all").style.display = "none";
+        document.getElementById('menu-chat-ul').innerHTML = '';
+    } catch(e){}
+    document.getElementById("ident").textContent = "";
+    document.getElementById("pinned").innerHTML = "";
+    document.getElementById("images_list").textContent = "";
+    socket.emit('leave', {room: st_chat});
+    if (st_chat){
+        if (Number(st_chat)){
+            document.getElementById("chat" + st_chat).style.background =  "white";
+        } else {
+            document.getElementById("my_chat" + st_chat.slice(2)).style.background =  "white";
+        }
+    };
+    document.getElementById('icon_c_chat').innerHTML = "";
+    document.getElementById("content").innerHTML = "";
+    document.getElementById('name_chat').innerText = "";
+    document.getElementById('chat_id').value = "";
+    document.getElementById('form').style.display = "none";
+    document.getElementById("btn_down").style.display = 'none';
+    if (globalThis.mobile) {
+        document.getElementById("plus_btn").style.display = "block";
+        document.getElementById("background-img").style.display = "none";
+        document.getElementById("container-mess").style.display = "none";
+        document.getElementById("settings_btn").style.display = 'block';
+        document.getElementById("button").style.visibility = 'hidden';
+        document.getElementById("email").style.display = "block";
+    }
+}
+
+
+function close_global_menu(){
+    document.getElementById("global_menu_d").style.display = "none";
+    document.getElementById("global_menu").innerHTML = "";
+}
+
+function add_voting_item(number){
+    let cnt_voting_items = document.getElementById("cnt_voting_items");
+    cnt_voting_items.value = Number(cnt_voting_items.value) + 1;
+    let items_cont = document.getElementById("items_cont");
+    let new_item = document.createElement("div");
+    let flex_div = document.createElement("div");
+    let h4 = document.createElement("h4");
+    h4.textContent = "Ответ " + number;
+    new_item.id = "voting_item" + number;
+    let input = document.createElement("input");
+    let delete_btn = document.createElement("button");
+    input.id = "item_text" + number;
+    input.classList = "form-control";
+    delete_btn.textContent = "-";
+    delete_btn.classList = "btn btn-danger"
+    delete_btn.setAttribute("onclick", `delete_answer_voting(${number + 1})`)
+    flex_div.classList = 'voting-item';
+    flex_div.appendChild(input);
+    flex_div.appendChild(delete_btn);
+    new_item.appendChild(h4);
+    new_item.appendChild(flex_div);
+    items_cont.appendChild(new_item);
+    document.getElementById("add_new_item_btn").setAttribute("onclick", `add_voting_item(${number + 1})`);
+}
+
+
+function gener_voting_create(){
+    document.getElementById("global_menu_d").style.display = "block";
+    let cont = document.getElementById("global_menu");
+    cont.innerHTML = `
+        <input id="cnt_voting_items" style="display: none;">
+        <h1>Опрос</h1>
+        <div class="voting-cont">
+        <textarea  class="form-control" aria-label="With textarea" placeholder="Вопрос" id="title_voting"></textarea>
+        </div>
+        <div id="items_cont" class="cont-ul voting-cont">
+        </div>
+        <div class="voting-cont">
+        <button id="add_new_item_btn" class="btn btn-primary" onclick="add_voting_item(2)">добавить ответ</button>
+        <button class="btn btn-primary" onclick="send_create_voting()">Отправить</button>
+        </div>`;
+
+    add_voting_item(1);
 }

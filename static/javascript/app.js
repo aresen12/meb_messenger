@@ -80,9 +80,7 @@ function un_pinned(mess_id){
     dataType: 'json',
     contentType:'application/json',
     data: JSON.stringify({"mess_id": mess_id, "chat_id": document.getElementById("chat_id").value}),
-    success: function(json){
-//         delete_pin_message(mess_id);
-    },
+    success: function(json){},
     error: function(err) {
         console.error(err);
     }
@@ -162,40 +160,21 @@ function set_recipient(id_chat, is_primary, name, status, pinned) {
 }
 
 
-function exit_chat(){
-    var st_chat = document.getElementById("chat_id").value;
-    try {
-        document.getElementById("menu_chat_div_all").style.display = "none";
-        document.getElementById('menu-chat-ul').innerHTML = '';
-    } catch(e){
-    }
-    document.getElementById("ident").textContent = "";
-    document.getElementById("pinned").innerHTML = "";
-    document.getElementById("images_list").textContent = "";
-    socket.emit('leave', {room: st_chat});
-    if (st_chat){
-        if (Number(st_chat)){
-            document.getElementById("chat" + st_chat).style.background =  "white";
-        } else {
-            document.getElementById("my_chat" + st_chat.slice(2)).style.background =  "white";
-        }
-    };
-    document.getElementById('icon_c_chat').innerHTML = "";
-    document.getElementById("content").innerHTML = "";
-    document.getElementById('name_chat').innerText = "";
-    document.getElementById('chat_id').value = "";
-    document.getElementById('form').style.display = "none";
-    document.getElementById("btn_down").style.display = 'none';
-    if (globalThis.mobile) {
-        document.getElementById("plus_btn").style.display = "block";
-        document.getElementById("background-img").style.display = "none";
-        document.getElementById("container-mess").style.display = "none";
-        document.getElementById("settings_btn").style.display = 'block';
-        document.getElementById("button").style.visibility = 'hidden';
-        document.getElementById("email").style.display = "block";
-    }
-}
+function voting(id_voting, i){
+     $.ajax({
+    url: '/m/voting',
+    type: 'POST',
+    dataType: 'json',
+    contentType:'application/json',
+    data: JSON.stringify({"mess_id": id_voting, "chat_id": document.getElementById("chat_id").value, "i" : i}),
+    success: function(json){
 
+    },
+    error: function(err) {
+        console.error(err);
+    }
+});
+}
 
 
 setSelectionRange = function(input, selectionStart, selectionEnd) {
@@ -279,7 +258,9 @@ function show(path){
             gener_sticker(c_m["id"], time[1].split(".")[0], c_m["html_m"], other, c_m['read'], c_m["name_sender"]);
         } else if (c_m["type"] == 2){
             gener_emoji(c_m["id"],  c_m["html_m"], other, c_m["text"]);
-        } else {
+        } else if (c_m["type"] == 4){
+            gener_voting(c_m["id"], c_m["text"], JSON.parse(c_m["html_m"]), other, c_m['read'], c_m["name_sender"], time[1].split(".")[0]);
+        }else {
             gener_html(c_m["id"], c_m["text"], time[1].split(".")[0],
             c_m["html_m"], file, other, c_m['read'], c_m["name_sender"]);
         }
@@ -352,7 +333,7 @@ function post_password() {
         let is_edit = confirm("Вы действительно хотите сменить пароль?");
         if (is_edit){
         $.ajax({
-            url: '/m/edit_password',
+            url: '/edit_password',
             type: 'POST',
             dataType: 'json',
             contentType:'application/json',
@@ -388,13 +369,16 @@ let is_edit = confirm("Вы действительно хотите отреда
 if (is_edit){
 document.getElementById("global_menu_d").style.display = "none";
 $.ajax({
-    url: '/m/edit_prof',
+    url: '/edit_prof',
     type: 'POST',
     dataType: 'json',
     contentType:'application/json',
     data: JSON.stringify({"name": document.getElementById("name_edit").value,
      "email": document.getElementById("email_edit").value}),
-    success: function(html){
+    success: function(json){
+            if (json["log"] == "bad username"){
+                alert("Неправильное username");
+            }
           get_chats('email', "set_recipient");
         },
     error: function(err) {
@@ -451,8 +435,6 @@ function block_user() {
 
 
 function answer(id_mess){
-//console.log(globalThis.menu_id,document.getElementById( globalThis.menu_id));
-
     exit_menu();
     var la = document.getElementById("edit-label");
     var t = document.getElementById("text" + id_mess).textContent.trim();
@@ -464,12 +446,6 @@ function answer(id_mess){
     la.style.display = "block";
     document.getElementById("html_m").value = `<button id="answer" class="answer-a"
     onclick="answer_color('m${id_mess}')">${t}</button>`;
-}
-
-
-function close_global_menu(){
-    document.getElementById("global_menu_d").style.display = "none";
-    document.getElementById("global_menu").innerHTML = "";
 }
 
 
@@ -557,7 +533,7 @@ function get_users(primary){
 
 function edit_name_chat(){
     $.ajax({
-        url: '/m/edit_name_chat',
+        url: '/chats/edit_name_chat',
         type: 'POST',
         dataType: 'json',
         contentType:'application/json',
@@ -686,6 +662,26 @@ function my_send_of(chat_id, id_m){
     });
 }
 
+
+function send_create_voting(){
+    let cnt_item = Number(document.getElementById("cnt_voting_items").value);
+    let voting = {};
+    for (let i = 1; i <= cnt_item; i++){
+        voting[i] = document.getElementById("item_text" + i).value;
+    }
+    $.ajax({
+        url: '/m/create_voting',
+        type: 'POST',
+        dataType: 'json',
+        contentType:'application/json',
+        data: JSON.stringify({"chat_id": document.getElementById("chat_id").value, "voting": voting,
+        "title_voting": document.getElementById("title_voting").value}),
+        success: function(json){},
+        error: function(err) {
+            console.error(err);
+        }
+    });
+}
 
 function send_of(chat_id, id_m, name_chat){
     $.ajax({
@@ -932,6 +928,11 @@ function copyToClipboard(id_m) {
     exit_menu();
   }
 
+function delete_answer_voting(){
+    alert("В разроботке")
+}
+
+
 
 function injectEmojisToList(e) {
         document.getElementById("about").value += e.innerHTML;
@@ -1012,9 +1013,12 @@ function get_new_message_id(){
             for (var j = 0; j < json["message"].length; j++){
                 var mess = json["message"][j];
                 let other = !(mess["id_sender"] == id_user);
-                if (mess["type"] == 3){
+                if (mess["type"] == 4){
+//                потом
+//                    gener_voting(mess[j], mess["time"], mess["html"], other, 0, mess["name_sender"], 0);
+                } else if (mess["type"] == 3){
                     gener_sticker(mess[j], mess["time"], mess["html"], other, 0, mess["name_sender"], 0);
-                } else if (c_m["type"] == 2){
+                } else if (mess["type"] == 2){
                     gener_emoji(mess[j],  mess["html"], other, mess["text"]);
                 } else {
                     gener_html(mess[j], mess["text"], mess["time"], mess["html"], mess["file"], other);

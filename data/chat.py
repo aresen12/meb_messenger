@@ -9,7 +9,7 @@ from data.my_chat import get_my_chat
 from data.admin import Admin
 from data.my_orm.message import Message
 from data.my_orm.engine import SessionDB
-from .my_orm.my_message import MyMessage
+# from .my_orm.my_message import MyMessage
 
 
 class Chat(SqlAlchemyBase, UserMixin, SerializerMixin):
@@ -46,14 +46,14 @@ def get_chats():
                 name = db_sess.query(User.name).filter(User.id == id_user).first()[0]
                 if int(id_user) in admins:
                     admin_flag = True
-            my_sess = SessionDB(f"db/chats/chat{i.id}.db")
+            my_sess = SessionDB(f"db/chats/chat{i.id}.db", factory=True)
             mess2 = my_sess.query(Message()).all()
             if len(mess2) != 0:
                 mess = mess2[-1]
                 new.append({"id": i.id, "name": name, "primary_chat": i.primary_chat, "pinned": int(i.pinned),
                             "status": i.status, "admin": admin_flag,
-                            "last_message": {"text": mess[2], "time": mess[8],
-                                             "name_sender": mess[6], "type": mess[9]
+                            "last_message": {"text": mess["message"], "time": mess['time'],
+                                             "name_sender": mess['name_sender'], "type": mess['type']
                                              }})
             else:
                 mess: Message

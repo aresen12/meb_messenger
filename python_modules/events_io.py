@@ -16,7 +16,6 @@ def on_join(data):
     db_sess = db_session.create_session()
     chat_members = db_sess.query(Chat.members).filter(Chat.id == data["room"]).first()
     db_sess.close()
-    print(room)
     if (current_user.is_authenticated
             and (room == f"u{current_user.id}" or (room == f"my{current_user.id}") or (not (chat_members is None) and str(current_user.id) in chat_members[0].split()))):
         join_room(room)
@@ -70,7 +69,8 @@ def send_all2(db_sess, chat_members, text, c_id, name, prim, chat_id, time):
                 name_chat = name
             else:
                 name_chat = name
-            emit("message_other", {"text": text, "chat_id": chat_id, "user_name": name, "time": time, "chat_name": name_chat}, to="u" + user_id)
+            emit("message_other", {"text": text, "chat_id": chat_id, "user_name": name, "time": time,
+                                   "chat_name": name_chat}, to="u" + user_id)
 
 
 @socketio.on('room_message')
@@ -79,7 +79,7 @@ def room_message(data):
     chat = db_sess.query(Chat).filter(Chat.id == data["room"]).first()
     chat: Chat
     if current_user.is_authenticated:
-        if str(current_user.id) in chat.members.split():
+        if current_user.id in map(int, chat.members.split()):
             my_sess = SessionDB(f"db/chats/chat{data['room']}.db")
             mess = new_mess(data['message'], current_user.id, current_user.name, data["html"])
             my_sess.add(mess)
@@ -92,7 +92,7 @@ def room_message(data):
                       mess.get_time())
             emit('message', {"message": data['message'], "time": mess.get_time(), "id_m": mess.id.value,
                              "file2": mess.img.value, "html": data["html"], "name": current_user.name,
-                             "read": 0, "id_sender": current_user.id, "pinned": mess.pinned.value,
+                             "read": 0, "id_sender": current_user.id,
                              "type": mess.type.value}, to=data['room'])
     db_sess.close()
 
