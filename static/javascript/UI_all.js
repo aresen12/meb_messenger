@@ -369,7 +369,7 @@ function leave_chat(chat_id){
 
 function close_edit() {
     globalThis.edit_id = "";
-    globalThis .edit_flag = false;
+    globalThis.edit_flag = false;
     document.getElementById("edit-label").style.display = "none";
 }
 
@@ -456,6 +456,7 @@ function close_global_menu(){
     document.getElementById("global_menu_d").style.display = "none";
     document.getElementById("global_menu").innerHTML = "";
 }
+
 
 function add_voting_item(number){
     let cnt_voting_items = document.getElementById("cnt_voting_items");

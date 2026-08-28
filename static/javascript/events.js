@@ -40,14 +40,14 @@ document.addEventListener('keydown', function(event) {
 });
 
 
-$('#content').on('contextmenu','div', function(e) { //Get li under ul and invoke on contextmenu
-        e.preventDefault(); //Prevent defaults
-        open_menu_mess(this.id); //alert the id
-});
+//$('#content').on('contextmenu','div', function(e) { //Get li under ul and invoke on contextmenu
+//        e.preventDefault(); //Prevent defaults
+//        open_menu_mess(this.id); //alert the id
+//});
 
 
 window.onfocus = function() {
-    globalThis.vis = true;
+    globalThis.vis = true;this.id
     if (document.getElementById("chat_id") && document.getElementById("chat_id").value != ""){
     set_read(document.getElementById("chat_id").value);
     }

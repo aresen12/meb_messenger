@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<script>function showDiv(Div) {
+    var x = document.getElementById(Div);
+    if(x.style.display=="none") {
+        x.style.display = "block";
+    } else {
+        x.style.display = "none";
+    }
+}
+</script>
+<h1 class="hello">добро пожаловать в kazbek_messenger!</h1>
+<div>
+    <div class="alert alert-primary" role="alert"><h3>Новости</h3>
+            <ul>
+                {% for i in range(alerts|length) %}
+                <li>{{alerts[(alerts|length - i - 1)].text}} {{alerts[(alerts|length - i - 1)].get_date()}}</li>
+                {% endfor %}
+            </ul>
+    </div>
+
+    <div class="alert alert-secondary" role="alert">
+        <h2>Вы можете принять участие в разработке!</h2>
+        Ссылка на исходный код
+        <a href="https://github.com/aresen12/web_messenger">https://github.com/aresen12/web_messenger</a>
+    </div>
+</div>
+{% endblock %}

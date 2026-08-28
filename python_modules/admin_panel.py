@@ -27,7 +27,7 @@ def main_page():
             voting = db_sess.query(Voting).all()
             actions = db_sess.query(Action).all()
             db_sess.close()
-            return render_template("admin_panel.html", votings=voting, activiti_list=activiti, user_list=users,
+            return render_template("/panel/admin_panel.html", votings=voting, activiti_list=activiti, user_list=users,
                                   actions=actions, permissions=permissions, block_pages=block_pages)
         return {"log": "Not authenticated"}
     else:
@@ -81,6 +81,7 @@ def delete_user():
         db_sess.commit()
         db_sess.close()
         return {"log": "Успешно"}
+
 
 @panel.route("/set_source/<source>")
 def set_source(source):
@@ -141,7 +142,7 @@ def news():
                 return "permission denied"
             alerts = db_sess.query(Alert).all()
             db_sess.close()
-            return render_template("news.html", news=alerts)
+            return render_template("/panel/news.html", news=alerts)
     else:
         db_sess = db_session.create_session()
         admin = db_sess.query(Admin).filter(Admin.id_user == current_user.id).first()
@@ -180,7 +181,7 @@ def profile():
         db_sess = db_session.create_session()
         admin = db_sess.query(Admin).filter(Admin.id_user == current_user.id).first()
         db_sess.close()
-        return render_template("admin_profile.html", admin=admin)
+        return render_template("/panel/admin_profile.html", admin=admin)
     return {"log": "permi"}
 
 

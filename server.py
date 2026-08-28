@@ -83,10 +83,10 @@ def login():
             db_sess.close()
             return redirect("/m")
         db_sess.close()
-        return render_template('login.html',
+        return render_template('/server/login.html',
                                message="Неправильный логин или пароль",
                                form=form)
-    return render_template('login.html', title='Авторизация', form=form)   
+    return render_template('/server/login.html', title='Авторизация', form=form)
 
 
 @application.route("/edit_prof", methods=["POST"])
@@ -127,13 +127,13 @@ def reqister():
     form = RegisterForm()
     if form.validate_on_submit():
         if form.password.data != form.password_again.data:
-            return render_template('register.html', title='Регистрация',
+            return render_template('/server/register.html', title='Регистрация',
                                    form=form,
                                    message="Пароли не совпадают")
         db_sess = db_session.create_session()
         if not check_username(db_sess=db_sess, username=form.email.data):
             db_sess.close()
-            return render_template('register.html', title='Регистрация',
+            return render_template('/server/register.html', title='Регистрация',
                                    form=form,
                                    message="Такой пользователь уже есть")
         user = User()
@@ -147,24 +147,36 @@ def reqister():
         login_user(user, remember=True, duration=datetime.timedelta(hours=24 * 90))
         db_sess.close()
         return redirect('/m')
-    return render_template('register.html', title='Регистрация', form=form)
+    return render_template('/server/register.html', title='Регистрация', form=form)
 
 
-# @application.route("/reset_password")
-# def reset_pass_def():
-#     return render_template("reset_password.html")
+@application.route("/reset_password")
+def reset_pass_def():
+    return render_template("/server/reset_password.html")
 
 
-# @application.route("/send_code_tg", methods=["POST"])
-# def send_code_tg_server():
-#     data = request.get_json()
-#     code = random.randint(100000, 999999)
-#     db_sess = db_session.create_session()
-#     user_id = db_sess.query(User.id).filter(User.email == data["login"]).first()
-#     test = send_random_key(user_id, code)
-#     code_status, message = test[0], test[1]
-#     db_sess.close()
-#     return {"status": code_status, "message": message}
+@application.route("/send_code", methods=["POST"])
+def send_code_tg_server():
+    data = request.get_json()
+    code = random.randint(100000, 999999)
+    db_sess = db_session.create_session()
+    user_id = db_sess.query(User.id).filter(User.email == data["login"]).first()
+    if user_id is None:
+        return {"status": 400, "message": "message"}
+    user_id = user_id[0]
+    last_code = db_sess.query(DCode).filter(DCode.id_user == user_id).first()
+    if (not (last_code is None) and datetime.datetime.strptime(last_code.time.split(".")[0],
+                                                               "%Y-%m-%d %H:%M:%S") - datetime.datetime.now()
+            < datetime.timedelta(hours=24)):
+        return {"status": 403, "message": "Запрошен код раньше таймаута"}
+    send_alert(user_id, db_sess, "Вы запросили код для сброса пароля", f"Ваш код: <b>{code}</b>")
+    dcode = DCode()
+    dcode.set_password(code)
+    dcode.id_user = user_id
+    db_sess.add(dcode)
+    db_sess.commit()
+    db_sess.close()
+    return {"status": 200, "message": "message"}
 
 
 @application.route("/check_code_and_login", methods=["POST"])
@@ -175,14 +187,18 @@ def check_code_and_login():
     db_sess = db_session.create_session()
     user = db_sess.query(User).filter(User.email == data["login"]).first()
     dcode = db_sess.query(DCode).filter(DCode.id_user == user.id).first()
+    if dcode is None or dcode.attempt_cnt >= 3:
+        db_sess.close()
+        return {"status": 403, "message": "Попытки закончились"}
     if dcode.check_password(code):
         user.set_password(new_password)
         db_sess.delete(dcode)
         db_sess.commit()
         db_sess.close()
         return {"status": 200}
+    db_sess.commit()
     db_sess.close()
-    return {"status": 500}
+    return {"status": 400, "message": "Неверный код"}
 
 
 # потом дописать и код возврата!!!!
@@ -194,7 +210,7 @@ def main():
     db_sess = db_session.create_session()
     alerts = db_sess.query(Alert).all()
     db_sess.close()
-    return render_template("main.html", title='главная', alerts=alerts)
+    return render_template("/server/main.html", title='главная', alerts=alerts)
 
 
 @application.route("/test")

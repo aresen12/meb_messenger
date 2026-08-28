@@ -86,7 +86,7 @@ function gener_emoji(id_mess, html_m, other, id_emoji){
 
 function open_menu_mess(id_mess){
     if (document.getElementById("watch").style.display == "block"){
-        return 200;
+        return false;
     }
     var chat_id = document.getElementById("chat_id").value;
     var name_functions = ["answer", "send", "pinned", "delete_mess", "copyToClipboard"];
@@ -138,6 +138,7 @@ function open_menu_mess(id_mess){
     globalThis.menu_id = "m" + id_mess;
     showdiv1("m" + id_mess);
     window.location.hash = "#m" + id_mess;
+    return false;
 }
 
 
@@ -187,9 +188,10 @@ function gener_sticker(id_m, time, html_m, other, read, name_sender){
     menu_con.classList.add("context-menu-open");
     menu_con.id = "mm" + id_m;
     messageItem.appendChild(menu_con);
-    messageItem.id = 'm' + id_m;
+    messageItem.id = `m${id_m}`;
     messageItem.style.background = "none";
     messageItem.style.color = "white";
+    messageItem.setAttribute("oncontextmenu", `open_menu_mess("m${id_m}");  return false`);
     messagesDiv.appendChild(messageItem);
      scrollToBottom("content");
 }
@@ -234,6 +236,7 @@ function gener_html(id_m, text, time, html_m, file_, other, read, name_sender, p
             }
      const messagesDiv = document.getElementById('content');
      const messageItem = document.createElement('div');
+     messageItem.id = 'm' + id_m;
     images = ["bmp", "jpg", "png", "svg", "webp", "jpeg"]
     audio = ["mp3", "flac", "m4a"]
     video = ["mp4", "mov"]
@@ -335,8 +338,7 @@ function gener_html(id_m, text, time, html_m, file_, other, read, name_sender, p
     menu_con.classList.add("context-menu-open");
     menu_con.id = "mm" + id_m;
     messageItem.appendChild(menu_con);
-    messageItem.id = 'm' + id_m;
-//    document.getElementById("content").innerHTML += new_mess;
+    messageItem.setAttribute("oncontextmenu", `open_menu_mess("m${id_m}");  return false`);
     messagesDiv.appendChild(messageItem);
      scrollToBottom("content");
      if(pinned){
@@ -493,6 +495,7 @@ function gener_voting(id_mess, text, data, other, read, name_sender, time){
     menu_con.id = "mm" + id_mess;
     messageItem.appendChild(menu_con);
     messageItem.id = 'm' + id_mess;
+    messageItem.setAttribute("oncontextmenu", `open_menu_mess("m${id_mess}");  return false`);
     messagesDiv.appendChild(messageItem);
     scrollToBottom("content");
 }

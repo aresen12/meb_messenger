@@ -72,7 +72,7 @@
         <div style="display:flex;">
             <h2 class="name-user" id="name_user">{{current_user.name}}</h2><a class="info-btn" href="/logout">
             <svg fill="#000000" height="30px" width="64px" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg"
-                 xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 384.971 384.971" xml:space="preserve"
+                viewBox="0 0 384.971 384.971" xml:space="preserve"
                  stroke="#000000"><g id="SVGRepo_bgCarrier" stroke-width="0"></g>
                 <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
                 <g id="SVGRepo_iconCarrier"> <g> <g id="Sign_Out"> <path
@@ -111,7 +111,6 @@
             Редактировать
         </button>
         <div>
-            <button class="edit-btn" onclick="set_username_tg()">изменить/добавить оповещения в тг</button>
             <button class="edit-btn" onclick="create_chat('1 {{current_user.id}}', '', 1)">Техподдержка</button>
 
         </div>
@@ -455,7 +454,6 @@
     <script src="/static/javascript/socketio.js"></script>
     <script src="/static/javascript/webrtc.js"></script>
     <script src='https://meet.jit.si/external_api.js'></script>
-  <input id="myid" style="display:none;">
 </main>
 </body>
 </html>

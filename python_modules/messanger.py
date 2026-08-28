@@ -13,6 +13,7 @@ from data.my_orm.my_message import MyMessage, new_mess_my
 from python_modules.keys import room_name, jwt, source_meet, server_name
 from data.my_orm.message import Message, new_mess
 from data.my_orm.engine import SessionDB
+from python_modules.safety import check_in_chat
 import json
 mg = Blueprint('messenger', __name__, url_prefix='/m')
 
@@ -43,9 +44,9 @@ def send_alert(id_, db_sess, text, html=""):
     my_sess.add(mess)
     my_sess.commit()
     my_sess.close()
-    emit('message', {"message": "", "time": mess.get_time(), "id_m": mess.id.value,
+    emit('message', {"message": text, "time": mess.get_time(), "id_m": mess.id.value,
                      "file2": "", "html": mess.html_m.value, "name": "Kazbek",
-                     "read": 0, "id_sender": current_user.id, "type": mess.type.value},
+                     "read": 0, "id_sender": 0, "type": mess.type.value},
          to=f"u{id_}", namespace="/")
 
 
@@ -58,7 +59,7 @@ def m_st(flag=1):
             file___ = open("static/img/emoji/meta_data.json", mode="r")
             metadata = json.load(file___)
             file___.close()
-            return render_template("messenger.html", device="", meta_data=metadata,
+            return render_template("/messenger/messenger.html", device="", meta_data=metadata,
                                    title='Kazbek', chats=chats, my_bg=current_user.id, room_name=room_name, jwt_my=jwt,
                                    flag=flag, server_name=server_name[source_meet])
         return redirect("/login")
@@ -70,10 +71,9 @@ def m_st(flag=1):
         if request.form["about"].strip() == "" and f.filename == "" and request.form["html_m"] == "":
             return redirect('/m')
         db_sess = db_session.create_session()
-        chat = db_sess.query(Chat).filter(Chat.id == request.form['chat_id']).first()
-        if not (current_user.id in map(int, chat.members.split())):
+        if not check_in_chat(request.form['chat_id'], db_sess, current_user.id):
             db_sess.close()
-            return redirect("/")
+            return {"log": "not in chat"}
         c_user = db_sess.query(User).filter(User.email == current_user.email).first()
         try:
             int(request.form["chat_id"])
@@ -148,6 +148,9 @@ def get_black():
 def pinned():
     data = request.get_json()
     db_sess = db_session.create_session()
+    if not check_in_chat(data["chat_id"], db_sess, current_user.id):
+        db_sess.close()
+        return {"log": "not in chat"}
     chat = db_sess.query(Chat).filter(Chat.id == data["chat_id"]).first()
     tm = chat.pinned_messages.split()
     tm.insert(0, str(data['mess_id']))
@@ -162,6 +165,9 @@ def pinned():
 def an_pinned():
     data = request.get_json()
     db_sess = db_session.create_session()
+    if not check_in_chat(data["chat_id"], db_sess, current_user.id):
+        db_sess.close()
+        return {"log": "not in chat"}
     chat = db_sess.query(Chat).filter(Chat.id == data["chat_id"]).first()
     p = chat.pinned_messages.split()
     del p[p.index(str(data["mess_id"]))]
@@ -182,6 +188,9 @@ def last_m():
 def get_files_menu():
     data = request.get_json()
     db_sess = db_session.create_session()
+    if not check_in_chat(data["chat_id"], db_sess, current_user.id):
+        db_sess.close()
+        return {"log": "not in chat"}
     files = db_sess.query(File).filter(File.chat_id == data["chat_id"]).all()
     json_res = []
     if str(data["chat_id"])[0] != "m":
@@ -211,14 +220,18 @@ def get_files_menu():
 @mg.route("/edit_message", methods=["POST"])
 def edit_mess():
     data = request.get_json()
-    db_sess = SessionDB(f"db/chats/chat{data['chat_id']}.db")
-    mess = db_sess.query(Message()).filter(f"message.id = {data['id']}").first()
+    if str(data['chat_id'])[0] == "m":
+        db_sess = SessionDB(f"db/my/{data['chat_id']}.db")
+        mess = db_sess.query(MyMessage()).filter(f"message.id = {data['id']}").first()
+    else:
+        db_sess = SessionDB(f"db/chats/chat{data['chat_id']}.db")
+        mess = db_sess.query(Message()).filter(f"message.id = {data['id']}").first()
     if mess.id_sender.value == current_user.id:
         mess.message.value = data["new_text"]
         mess.read.value = 0
         db_sess.update(mess)
         db_sess.commit()
-    emit("edit_message", {"id_mess": data["id"]}, to=data["chat_id"])
+    emit("edit_message", {"id_mess": data["id"], "new_text": data["new_text"]}, to=data["chat_id"], namespace="/")
     db_sess.close()
     return {"log": True}
 
@@ -226,6 +239,9 @@ def edit_mess():
 @mg.route("/send_voice/<chat_id>", methods=["POST"])
 def send_voice(chat_id):
     db_sess = db_session.create_session()
+    if not check_in_chat(chat_id, db_sess, current_user.id):
+        db_sess.close()
+        return {"log": "not in chat"}
     if str(chat_id)[0] == "m":
         sess_my = SessionDB(f"db/my/{chat_id}.db")
     else:
@@ -283,9 +299,10 @@ def get_user(id_):
 def voting_server():
     data = request.get_json()
     db_sess = db_session.create_session()
-    chat = db_sess.query(Chat).filter(Chat.id == data['chat_id']).first()
-    if not (current_user.id in map(int, chat.members.split())):
-        return {"log": "not auth"}
+    if not check_in_chat(data["chat_id"], db_sess, current_user.id):
+        db_sess.close()
+        return {"log": "not in chat"}
+    db_sess.close()
     if str(data['chat_id'])[0] == "m":
         sess_my = SessionDB(f"db/my/{data['chat_id']}.db")
     else:
@@ -297,7 +314,6 @@ def voting_server():
     sess_my.update(message)
     sess_my.commit()
     sess_my.close()
-    db_sess.close()
     emit("voting", {"id_voting": data["mess_id"], "chat_id": data['chat_id'], 'voting': json_voting}, to=data["chat_id"], namespace="/")
     return {"log": 200}
 
@@ -306,19 +322,21 @@ def voting_server():
 def create_voting_server():
     data = request.get_json()
     db_sess = db_session.create_session()
-    chat = db_sess.query(Chat).filter(Chat.id == data['chat_id']).first()
-    if not (current_user.id in map(int, chat.members.split())):
+    if not check_in_chat(data['chat_id'], db_sess, current_user.id):
+        db_sess.close()
         return {"log": "not auth"}
+    db_sess.close()
     gener_json = {"voting": []}
     keys = data["voting"].keys()
     for key in keys:
         gener_json["voting"].append({"text": data["voting"][key], "cnt": []})
     if str(data['chat_id'])[0] == "m":
         sess_my = SessionDB(f"db/my/{data['chat_id']}.db")
+        message = new_mess_my(data["title_voting"], current_user.id, current_user.name, json.dumps(gener_json), type_=4 )
     else:
         sess_my = SessionDB(f"db/chats/chat{data['chat_id']}.db")
+        message = new_mess(data["title_voting"], current_user.id, current_user.name, json.dumps(gener_json), type=4)
     print(data)
-    message = new_mess(data["title_voting"], current_user.id, current_user.name, json.dumps(gener_json), type=4)
     sess_my.add(message)
     sess_my.commit()
     emit("new_voting", {"id_mess": message.id.value, "text": data["title_voting"], "voting": gener_json,
@@ -342,6 +360,11 @@ def get_chat_user(id_):
 @mg.route("/delete", methods=["DELETE"])
 def delete_mess():
     data = request.get_json()
+    db_sess = db_session.create_session()
+    if not check_in_chat(data["chat_id"], db_sess, current_user.id):
+        db_sess.close()
+        return {"log": "not in chat"}
+    db_sess.close()
     if str(data["chat_id"])[0] == "m":
         db_sess = SessionDB(f"db/my/my{current_user.id}.db")
     else:
@@ -349,13 +372,14 @@ def delete_mess():
     mes = db_sess.query(Message()).filter(f'message.id = {data["id"]}').first()
     mes: Message
     if mes is None:
+        db_sess.close()
         return {"log": "bad id", "delete_id": data["id"]}
-    if mes.type != 2:
+    if mes.type.value != 2:
         emit('delete_message', {"message_id": mes.id.value}, to=str(data["chat_id"]), namespace="/")
     else:
         emit('delete_emoji', {"message_id_on_emoji": mes.html_m.value,
                               "id_emoji": mes.message.value, "id_sender": mes.id_sender.value,
-                              "id_message_emoji": mes.id},
+                              "id_message_emoji": mes.id.value},
              to=str(data["chat_id"]),  namespace="/")
     list_emoji = db_sess.query(Message()).filter("message.type = 2").filter(f"message.html_m = {data['id']}").all()
     for _ in list_emoji:
@@ -427,7 +451,7 @@ def get_json_mess_my():
         messages = db_sess.query(MyMessage()).all()
         sess = db_session.create_session()
         js = {"messages": [], "files": get_files("my" + data["chat_id"], sess), "pinned_message": []}
-        messages.sort(key=lambda x: x[8])
+        messages.sort(key=lambda x: x["time"])
         for m in messages:
             js["messages"].append({"id": m["id"], "read": m["read"], "html_m": m['html_m'], "text": m["message"],
                                    'time': m["time"], "file": m['img'], "id_sender": m["id_sender"],
@@ -444,11 +468,10 @@ def get_json_message():
     if current_user.is_authenticated:
         data = request.get_json()
         db_sess = db_session.create_session()
-        chat = db_sess.query(Chat).filter(Chat.id == data["chat_id"]).first()
-        if not (str(current_user.id) in chat.members.split()):
+        if not check_in_chat(data['chat_id'], db_sess, current_user.id):
             db_sess.close()
-            return {"log": "Permission error"}
-        db_sess.close()
+            return {"log": "not in chat"}
+        chat = db_sess.get(Chat, data["chat_id"])
         my_orm = SessionDB(f"db/chats/chat{data['chat_id']}.db", factory=True)
         messages = my_orm.query(Message()).all()
         pinned_messages = []

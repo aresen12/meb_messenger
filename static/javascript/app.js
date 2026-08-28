@@ -264,6 +264,12 @@ function show(path){
             gener_html(c_m["id"], c_m["text"], time[1].split(".")[0],
             c_m["html_m"], file, other, c_m['read'], c_m["name_sender"]);
         }
+//             console.log(`m${c_m["id"]}`, $(`#m${c_m["id"]}`))
+//             $(`#m${c_m["id"]}`).on('contextmenu','div', function(e) {  //Get li under ul and invoke on contextmenu
+////        e.preventDefault(); //Prevent defaults
+//        alert("test")
+//        open_menu_mess(`m${c_m["id"]}`); //alert the id
+//});
         }
         for (let i = 0;i < json_mess["pinned_message"].length; i++){
             add_pinned(json_mess["pinned_message"][i]);
@@ -320,6 +326,7 @@ function create_chat(list_members, name, is_primary){
 
 
 function send(id){
+    exit_menu();
     document.getElementById("global_menu").innerHTML = "";
     get_chats_gl("global_menu", id);
     document.getElementById("global_menu_d").style.display = "block";
@@ -676,7 +683,9 @@ function send_create_voting(){
         contentType:'application/json',
         data: JSON.stringify({"chat_id": document.getElementById("chat_id").value, "voting": voting,
         "title_voting": document.getElementById("title_voting").value}),
-        success: function(json){},
+        success: function(json){
+            close_global_menu();
+        },
         error: function(err) {
             console.error(err);
         }

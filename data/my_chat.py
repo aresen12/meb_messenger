@@ -13,6 +13,7 @@ class MYChat(SqlAlchemyBase, UserMixin, SerializerMixin):
     id = sqlalchemy.Column(sqlalchemy.Integer,
                            primary_key=True, autoincrement=False)  # 1 - current 2 - deleted 3 - blocked
     pinned = sqlalchemy.Column(sqlalchemy.Boolean, default=False, nullable=True)
+    pinned_messages = sqlalchemy.Column(sqlalchemy.String, default="", nullable=True)
 
     def __repr__(self):
         return f"{self.id} избранное"

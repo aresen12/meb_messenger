@@ -1,7 +1,7 @@
 function send_num_code(){
     const login = document.getElementById('login-input').value;
     $.ajax({
-        url: '/send_code_tg',
+        url: '/send_code',
         type: 'POST',
         dataType: 'json',
         contentType:'application/json',
@@ -42,7 +42,7 @@ function check_code() {
                 document.getElementById("global-div").appendChild(div_mess);
             } else {
                 var div_mess = document.createElement("div");
-                div_mess.textContent = "Неверный код";
+                div_mess.textContent = json['message'];
                 div_mess.classList = "alert alert-primary";
                 document.getElementById("hide_password_div").appendChild(div_mess);
             }
